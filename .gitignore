@@ -1,0 +1,21 @@
+.env
+coverage.xml
+coverage
+.coverage
+__pycache__
+downloaded_images
+sample_models
+# pem files
+*.pem
+.ragatouille
+*.crt
+*.key
+*.p12
+*.context.json
+node_modules
+build
+.vercel
+.aider*
+/tmp
+dist
+tmp.rm.later

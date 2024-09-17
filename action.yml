@@ -1,0 +1,51 @@
+name: 'Intelligent DevOps (Intelli-Ops) using Amazon Bedrock'
+description: 'AI-powered GitHub Action for code reviews, PR descriptions, unit tests, and issue management using Amazon Bedrock.'
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+  aws-region:
+    description: 'AWS Region'
+    required: true
+    default: 'us-east-1'
+  model-id:
+    description: 'Model ID'
+    required: false
+    # Use specific prefix sagemaker.<api url> to specify the model hosted in AWS SageMaker
+    default: 'anthropic.claude-3-5-sonnet-20240620-v1:0'
+  generate-code-review-exclude-files:
+    description: 'Exclude file list, separated by comma, e.g. [*.md,*.json]'
+    required: false
+    # defaul to null to disable the filter
+    default: ''
+  generate-code-review-level:
+    description: 'Code review level'
+    required: false
+    default: 'detailed'
+  generate-code-review:
+    description: 'Generate code review'
+    required: false
+  generate-pr-description:
+    description: 'Generate PR description'
+    required: false
+    default: 'false'
+  generate-unit-test:
+    description: 'Whether to generate unit tests'
+    required: false
+    default: 'false'
+  generate-unit-test-source-folder:
+    description: 'The folder path where unit tests should be generated based on the source code, only applicable when generate-unit-test is true'
+    required: false
+    default: ''
+  output-language:
+    description: 'Output language'
+    required: false
+    default: 'en'
+# The index.js file in the intelligent-code-review action no longer needs to explicitly set AWS credentials. It will use the credentials set up by the configure-aws-credentials action
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+
+branding:
+  color: 'purple'
+  icon: 'check-circle'
