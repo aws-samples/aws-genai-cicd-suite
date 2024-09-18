@@ -378,7 +378,7 @@ Maintain a constructive and educational tone. Be thorough but not overly pedanti
 </code_change>
 
 <detailed_task_description>
-Review the provided code change, considering the following aspects:
+Review the provided code change, which is presented in diff format. Lines starting with '+' are additions, and lines starting with '-' are removals. Consider the following aspects:
 1. Design: Evaluate the overall design and how it integrates with the existing system.
 2. Functionality: Assess if the code does what it's intended to do and if it's good for the users.
 3. Complexity: Check if the code is more complex than necessary.
@@ -406,7 +406,7 @@ Provide feedback on these aspects, categorizing your comments as follows:
 7. If relevant, mention any educational points that could help the developer learn, prefixed with "Learning opportunity:".
 </rules>
 
-If changed code is good or simple enough to skip or not fitting in categories: Critical, Improvements, Suggestions, please answer only "No Review Needed" directly. Otherwise provide your review in the following format. Limit the total response within 100 words, the output language should be {{LANGUAGE_NAME}}, and follow the output format below.
+If changed code is good or simple enough to skip or not fitting in categories: Critical, Improvements, Suggestions, please answer only "Looks Good To Me" directly. Otherwise provide your review in the following format. Limit the total response within 100 words, the output language should be {{LANGUAGE_NAME}}, and follow the output format below.
 
 Summary:
 Conclude the review with one of the following statements: "Approve", "Approve with minor modifications", or "Request changes", in ONLY one of the categories below
@@ -435,7 +435,7 @@ Maintain a constructive and educational tone. Be thorough but not overly pedanti
 </code_change>
 
 <detailed_task_description>
-Review the provided code change, considering the following aspects:
+Review the provided code change, which is presented in diff format. Lines starting with '+' are additions, and lines starting with '-' are removals. Consider the following aspects:
 1. Design: Evaluate the overall design and how it integrates with the existing system.
 2. Functionality: Assess if the code does what it's intended to do and if it's good for the users.
 3. Complexity: Check if the code is more complex than necessary.
@@ -456,7 +456,7 @@ Provide feedback on these aspects, categorizing your comments as follows:
 5. If suggesting an alternative approach, briefly explain its benefits.
 </rules>
 
-If changed code is good or simple enough to skip or not fitting in categories: Critical, Improvements, please answer only "No Review Needed" directly. Otherwise provide your review in the following format. Limit the total response within 50 words. The output language should be {{LANGUAGE_NAME}}, and follow the output format below.
+If changed code is good or simple enough to skip or not fitting in categories: Critical, Improvements, please answer only "Looks Good To Me" directly. Otherwise provide your review in the following format. Limit the total response within 50 words. The output language should be {{LANGUAGE_NAME}}, and follow the output format below.
 
 Summary:
 Conclude the review with one of the following statements: "Approve", "Approve with minor modifications", or "Request changes", in ONLY one of the categories below
@@ -473,7 +473,7 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
   const pullRequest = context.payload.pull_request as PullRequest;
   const repo = context.repo;
 
-  // fetch the list of files changed in the PR each time since the file can be changed in operation like unit test generation, code review, etc.
+  // fetch the list of files changed in the PR each time since the file can be changed in operation like unit test generation etc.
   const { data: files } = await octokit.rest.pulls.listFiles({
     ...repo,
     pull_number: pullRequest.number,
@@ -500,25 +500,18 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
       // Split the patch into hunks
       const hunks = file.patch.split(/^@@\s+-\d+,\d+\s+\+\d+,\d+\s+@@/m);
       let totalPosition = 0;
-
+      console.log(`======================= Debugging Hunks of file: ${file.filename} ========================\n ${hunks}\n ================================================`);
       for (const [hunkIndex, hunk] of hunks.entries()) {
         if (hunkIndex === 0) continue; // Skip the first element (it's empty due to the split)
         const hunkLines = hunk.split('\n').slice(1); // Remove the hunk header
-        const changedLines = hunkLines
-          .filter(line => line.startsWith('+') && !line.startsWith('+++'))
-          .map(line => line.substring(1));
-        // console.log(`  Hunk ${hunkIndex} content: ${hunk} with changed lines: ${changedLines}`);
 
-        if (changedLines.length === 0) continue;
-
-        const fileContent = changedLines.join('\n');
-
-        // two options for review level: detailed and concise
+        // Include all lines in the hunk, preserving '+' and '-' prefixes
+        const diffContent = hunkLines.join('\n');
+        console.log(`======================= Debugging Diff content ========================\n ${diffContent}\n ================================================`);
         const promptTemplate = reviewLevel === 'detailed' ? detailed_review_prompt : concise_review_prompt;
-        let formattedContent = promptTemplate.replace('{{CODE_SNIPPET}}', fileContent);
+        let formattedContent = promptTemplate.replace('{{CODE_SNIPPET}}', diffContent);
 
-        // get the actual language name from the language code
-        const languageName = languageCodeToName[outputLanguage as LanguageCode] || 'English'; // Default to English if the language code is not found
+        const languageName = languageCodeToName[outputLanguage as LanguageCode] || 'English';
         if (!(outputLanguage in languageCodeToName)) {
           core.warning(`Unsupported output language: ${outputLanguage}. Defaulting to English.`);
         }
@@ -535,26 +528,13 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
           continue;
         }
 
-        // Calculate the position for this hunk
-        let hunkPosition = totalPosition + 1;
-        for (const line of hunkLines) {
-          if (line.startsWith('+') && !line.startsWith('+++')) {
-            // Check if the added line is a comment or actual code
-            if (!line.trim().startsWith('//') && !line.trim().startsWith('/*')) {
-              console.log(`Review comments ${review} generated for file: ${file.filename} with position: ${hunkPosition}`);
-              reviewComments.push({
-                path: file.filename,
-                position: hunkPosition,
-                body: review,
-              });
-              break;
-            }
-          }
-          if (!line.startsWith('-')) {
-            hunkPosition++;
-          }
-        }
-
+        // add the generated review comments to the end of per hunk
+        const position = totalPosition + 1;
+        reviewComments.push({
+          path: file.filename,
+          position: position,
+          body: review,
+        });
         totalPosition += hunkLines.length;
       }
     } else {

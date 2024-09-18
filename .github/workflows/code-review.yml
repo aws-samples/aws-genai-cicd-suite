@@ -56,7 +56,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
-      uses: yike5460/intelli-ops@v0.0.84
+      uses: aws-sample/aws-genai-cicd-suite@v0.0.1
       with:
         # Automatic Provision: The GITHUB_TOKEN is automatically created and provided by GitHub for each workflow run. You don't need to manually create or store this token as a secret.
         github-token: ${{ secrets.GITHUB_TOKEN }}
