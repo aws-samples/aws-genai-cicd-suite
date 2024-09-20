@@ -19,3 +19,4 @@ build
 /tmp
 dist
 tmp.rm.later
+package-lock.json
