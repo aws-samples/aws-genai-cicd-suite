@@ -7,6 +7,13 @@ const app = express();
 app.use(express.json());
 
 const port = process.env.PORT || 3000;
+
+// Check if GITHUB_APP_TOKEN is set
+if (!process.env.GITHUB_APP_TOKEN) {
+  console.error("Error: GITHUB_APP_TOKEN environment variable is not set");
+  process.exit(1);
+}
+
 const octokit = new Octokit({ auth: process.env.GITHUB_APP_TOKEN });
 console.log("GitHub App Token is set:", !!process.env.GITHUB_APP_TOKEN);
 

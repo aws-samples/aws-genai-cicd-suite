@@ -2,8 +2,14 @@ import { Octokit } from '@octokit/rest';
 import { getOctokit, context } from '@actions/github';
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
-// const octokit = new Octokit({ auth: process.env.GITHUB_APP_TOKEN });
-const octokit = getOctokit(process.env.GITHUB_TOKEN as string);
+// Check if GITHUB_APP_TOKEN is set
+if (!process.env.GITHUB_APP_TOKEN) {
+  console.error("Error: GITHUB_APP_TOKEN environment variable is not set");
+  process.exit(1);
+}
+
+export const octokit = new Octokit({ auth: process.env.GITHUB_APP_TOKEN });
+
 const bedrockClient = new BedrockRuntimeClient({ region: 'us-east-1' });
 const modelId = 'anthropic.claude-3-sonnet-20240229-v1:0'; // Replace with your desired model ID
 const unitTestPrompt = "Generate unit tests for the following code: {{SOURCE_CODE}}";

@@ -81,7 +81,7 @@ def main():
 
     # Unnecessary time delay
     time.sleep(5)
-    print("Finished processing")
+    print("Finished processing after 5 seconds")
 
 if __name__ == "__main__":
     main()

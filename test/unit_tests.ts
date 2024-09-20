@@ -1,288 +1,258 @@
-test('default test', () => { expect(true).toBe(true); });
+import { splitContentIntoChunks_deprecated } from '../src/utils';
 
-import { analyzeCoverage } from '../src/analyzer';
-import * as fs from 'fs';
-import * as path from 'path';
-import { execSync } from 'child_process';
+describe('splitContentIntoChunks_deprecated', () => {
+  it('should split content into chunks with the specified maximum chunk size', () => {
+    const content = 'Line 1\
+Line 2\
+Line 3\
+Line 4\
+Line 5';
+    const maxChunkSize = 10;
+    const expectedChunks = ['Line 1\
+', 'Line 2\
+', 'Line 3\
+', 'Line 4\
+', 'Line 5'];
 
-jest.mock('fs');
-jest.mock('path');
-jest.mock('child_process');
+    const chunks = splitContentIntoChunks_deprecated(content, maxChunkSize);
 
-describe('analyzeCoverage', () => {
-  const testFilePath = 'path/to/test/file';
-  const sourceCode = 'const add = (a, b) => a + b;';
-  const coverageSummary = {
-    'path/to/temp_source.ts': {
-      statements: { total: 1, covered: 1, pct: 100 },
-      branches: { total: 0, covered: 0, pct: 100 },
-      functions: { total: 1, covered: 1, pct: 100 },
-      lines: { total: 1, covered: 1, pct: 100 },
-    },
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    fs.existsSync.mockReturnValueOnce(false);
-    fs.readFileSync.mockReturnValue(JSON.stringify(coverageSummary));
-    execSync.mockImplementation(() => {});
+    expect(chunks).toEqual(expectedChunks);
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
+  it('should handle empty content', () => {
+    const content = '';
+    const maxChunkSize = 10;
+    const expectedChunks = [];
+
+    const chunks = splitContentIntoChunks_deprecated(content, maxChunkSize);
+
+    expect(chunks).toEqual(expectedChunks);
   });
 
-  it('should create the coverage directory if it does not exist', async () => {
-    await analyzeCoverage(testFilePath, sourceCode);
+  it('should handle content with a single long line', () => {
+    const content = 'This is a very long line that should not be split';
+    const maxChunkSize = 10;
+    const expectedChunks = ['This is a', ' very lon', 'g line th', 'at should', ' not be s', 'plit'];
 
-    expect(fs.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('coverage'), { recursive: true });
-  });
-});
+    const chunks = splitContentIntoChunks_deprecated(content, maxChunkSize);
 
-
-import { analyzeCoverage } from '../src/analyzer';
-import * as fs from 'fs';
-import * as path from 'path';
-import { execSync } from 'child_process';
-
-jest.mock('fs');
-jest.mock('path');
-jest.mock('child_process');
-
-describe('analyzeCoverage', () => {
-  const testFilePath = 'path/to/test/file';
-  const sourceCode = 'const add = (a, b) => a + b;';
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    fs.existsSync.mockReturnValue(true);
-    execSync.mockImplementation(() => {
-      throw new Error('Test execution failed');
-    });
-    console.error = jest.fn();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('should handle test execution failure and return default coverage data', async () => {
-    const coverageData = await analyzeCoverage(testFilePath, sourceCode);
-
-    expect(console.error).toHaveBeenCalledWith('Error analyzing coverage:', expect.any(Error));
-    expect(coverageData).toEqual({
-      statements: 0,
-      branches: 0,
-      functions: 0,
-      lines: 0,
-    });
+    expect(chunks).toEqual(expectedChunks);
   });
 });
 
 
-test('default test', () => { expect(true).toBe(true); });
+import { shouldExcludeFile } from '../src/utils';
 
-import { validateTestCases } from './validateTestCases';
-import { TestCase } from './testUtils';
+describe('shouldExcludeFile', () => {
+  it('should return true if the filename matches any exclude pattern', () => {
+    const filename = 'src/utils.ts';
+    const excludePatterns = ['*.js', 'src/*.ts'];
 
-describe('validateTestCases', () => {
-  const validSourceCode = 'function add(a, b) { return a + b; }';
-  const validTestCases: TestCase[] = [
-    {
-      name: 'Test adding two numbers',
-      type: 'direct',
-      code: 'const sum = add(2, 3); expect(sum).toBe(5);'
-    },
-    {
-      name: 'Test adding negative numbers',
-      type: 'indirect',
-      code: 'const sum = add(-2, -3); expect(sum).toBe(-5);'
-    }
-  ];
+    const result = shouldExcludeFile(filename, excludePatterns);
 
-  it('should return an array of valid test cases', async () => {
-    const validatedTestCases = await validateTestCases(validTestCases, validSourceCode);
-    expect(validatedTestCases).toHaveLength(2);
-    expect(validatedTestCases).toEqual(validTestCases);
+    expect(result).toBe(true);
+  });
+
+  it('should return false if the filename does not match any exclude pattern', () => {
+    const filename = 'src/index.ts';
+    const excludePatterns = ['*.js', 'test/*'];
+
+    const result = shouldExcludeFile(filename, excludePatterns);
+
+    expect(result).toBe(false);
+  });
+
+  it('should handle wildcard patterns correctly', () => {
+    const filename = 'src/utils/helpers.ts';
+    const excludePatterns = ['src/utils/*'];
+
+    const result = shouldExcludeFile(filename, excludePatterns);
+
+    expect(result).toBe(true);
+  });
+
+  it('should handle an empty exclude patterns array', () => {
+    const filename = 'src/index.ts';
+    const excludePatterns = [];
+
+    const result = shouldExcludeFile(filename, excludePatterns);
+
+    expect(result).toBe(false);
   });
 });
 
-import { validateTestCases } from './validateTestCases';
-import { TestCase } from './testUtils';
 
-describe('validateTestCases', () => {
-  const validSourceCode = 'function add(a, b) { return a + b; }';
-  const invalidTestCases: TestCase[] = [
-    {
-      name: 'Test with missing name',
-      type: 'direct',
-      code: 'const sum = add(2, 3); expect(sum).toBe(5);'
-    },
-    {
-      name: 'Test with invalid type',
-      type: 'invalid',
-      code: 'const sum = add(-2, -3); expect(sum).toBe(-5);'
-    },
-    {
-      name: 'Test with missing code',
-      type: 'direct'
-    }
-  ];
+import { calculateFilePatchNumLines } from '../src/utils';
 
-  beforeEach(() => {
-    console.warn = jest.fn();
+describe('calculateFilePatchNumLines', () => {
+  it('should correctly count added and removed lines in a file patch', () => {
+    const filePatch = `@@ -1,3 +1,4 @@
+-line1
+ line2
++line3
++line4`;
+    const { added, removed } = calculateFilePatchNumLines(filePatch);
+
+    expect(added).toBe(2);
+    expect(removed).toBe(1);
   });
 
-  afterEach(() => {
-    jest.resetAllMocks();
+  it('should handle an empty file patch', () => {
+    const filePatch = '';
+    const { added, removed } = calculateFilePatchNumLines(filePatch);
+
+    expect(added).toBe(0);
+    expect(removed).toBe(0);
   });
 
-  it('should filter out invalid test cases and log warnings', async () => {
-    const validatedTestCases = await validateTestCases(invalidTestCases, validSourceCode);
-    expect(validatedTestCases).toHaveLength(0);
-    expect(console.warn).toHaveBeenCalledTimes(3);
-    expect(console.warn).toHaveBeenCalledWith('Invalid test case: Test with missing name');
-    expect(console.warn).toHaveBeenCalledWith('Invalid test case: Test with invalid type');
-    expect(console.warn).toHaveBeenCalledWith('Invalid test case: Test with missing code');
-  });
-});
+  it('should handle a file patch with only additions', () => {
+    const filePatch = `@@ -1,3 +1,5 @@
+ line1
+ line2
++line3
++line4`;
+    const { added, removed } = calculateFilePatchNumLines(filePatch);
 
-import { isValidTestCase } from './validateTestCases';
-import { TestCase } from './testUtils';
-
-describe('isValidTestCase', () => {
-  const validSourceCode = 'function add(a, b) { return a + b; }';
-  const validTestCase: TestCase = {
-    name: 'Test adding two numbers',
-    type: 'direct',
-    code: 'const sum = add(2, 3); expect(sum).toBe(5);'
-  };
-  const invalidTestCase: TestCase = {
-    name: '',
-    type: 'invalid',
-    code: 'const sum = add(2, 3); expect(sum).toBe(5);'
-  };
-
-  it('should return true for a valid test case', () => {
-    const isValid = isValidTestCase(validTestCase, validSourceCode);
-    expect(isValid).toBe(true);
+    expect(added).toBe(2);
+    expect(removed).toBe(0);
   });
 
-  it('should return false for an invalid test case', () => {
-    const isValid = isValidTestCase(invalidTestCase, validSourceCode);
-    expect(isValid).toBe(false);
+  it('should handle a file patch with only removals', () => {
+    const filePatch = `@@ -1,4 +1,3 @@
+-line1
+ line2
+ line3
+-line4`;
+    const { added, removed } = calculateFilePatchNumLines(filePatch);
+
+    expect(added).toBe(0);
+    expect(removed).toBe(2);
   });
 });
 
-import { extractSymbols } from './validateTestCases';
-import * as ts from 'typescript';
 
-describe('extractSymbols', () => {
-  it('should extract function and class names from the source code', () => {
-    const sourceCode = `
+import { extractFunctions } from '../src/utils';
+
+describe('extractFunctions', () => {
+  it('should extract functions from the provided code', async () => {
+    const code = `
       function add(a, b) {
         return a + b;
       }
 
-      class Calculator {
-        constructor() {}
-
-        subtract(a, b) {
-          return a - b;
+      export async function calculateSum(nums) {
+        let sum = 0;
+        for (const num of nums) {
+          sum += num;
         }
+        return sum;
       }
+
+      const multiply = (a, b) => a * b;
     `;
-    const sourceFile = ts.createSourceFile('source.ts', sourceCode, ts.ScriptTarget.Latest, true);
 
-    const symbols = extractSymbols(sourceFile);
-    expect(symbols).toContain('add');
-    expect(symbols).toContain('Calculator');
-    expect(symbols).not.toContain('subtract');
+    const expectedFunctions = [
+      'function add(a, b) {\
+        return a + b;\
+      }',
+      'export async function calculateSum(nums) {\
+        let sum = 0;\
+        for (const num of nums) {\
+          sum += num;\
+        }\
+        return sum;\
+      }',
+      'const multiply = (a, b) => a * b;',
+    ];
+
+    const extractedFunctions = await extractFunctions(code);
+
+    expect(extractedFunctions).toEqual(expectedFunctions);
+  });
+
+  it('should handle an empty code string', async () => {
+    const code = '';
+    const expectedFunctions = [];
+
+    const extractedFunctions = await extractFunctions(code);
+
+    expect(extractedFunctions).toEqual(expectedFunctions);
+  });
+
+  it('should handle a code string without functions', async () => {
+    const code = 'const x = 42;\
+console.log(x);';
+    const expectedFunctions = [];
+
+    const extractedFunctions = await extractFunctions(code);
+
+    expect(extractedFunctions).toEqual(expectedFunctions);
   });
 });
 
-// This function relies on the TypeScript compiler API and the 'typescript' module.
-// It is difficult to mock the internal behavior of the TypeScript compiler.
-// Instead of unit testing this function, it would be better to write integration tests
-// that test the overall functionality of the validateTestCases module.
 
-test('default test', () => { expect(true).toBe(true); });
+import { generatePRDescription } from '../src/utils';
+import * as github from '@actions/github';
+import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 
-import { exponentialBackoff } from '../src/yourFile';
+jest.mock('@actions/github');
+jest.mock('@aws-sdk/client-bedrock-runtime');
 
-describe('exponentialBackoff', () => {
-  it('should execute the function and return the result on a successful attempt', async () => {
-    // Mock the function to resolve with a value
-    const mockFn = jest.fn().mockResolvedValue('success');
+describe('generatePRDescription', () => {
+  const mockClient = {} as BedrockRuntimeClient;
+  const mockOctokit = {
+    rest: {
+      pulls: {
+        listFiles: jest.fn(),
+        update: jest.fn(),
+      },
+      repos: {
+        getContent: jest.fn(),
+      },
+    },
+  };
 
-    // Call the exponentialBackoff function with the mocked function
-    const result = await exponentialBackoff(mockFn, 3, 100);
-
-    // Assertions
-    expect(result).toBe('success');
-    expect(mockFn).toHaveBeenCalledTimes(1);
-  });
-});
-
-import { exponentialBackoff } from '../src/yourFile';
-
-describe('exponentialBackoff', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.clearAllMocks();
+    github.context.payload.pull_request = {
+      number: 123,
+      head: {
+        sha: 'abc123',
+        ref: 'feature/test',
+      },
+    } as github.context.Payload;
+    github.context.repo = {
+      owner: 'test-org',
+      repo: 'test-repo',
+    };
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+  it('should generate a PR description and update the PR', async () => {
+    const mockFiles = [
+      { filename: 'file1.ts', status: 'modified', patch: '+line1\
+-line2' },
+      { filename: 'file2.ts', status: 'added', patch: '+line1\
++line2' },
+    ];
+    mockOctokit.rest.pulls.listFiles.mockResolvedValue({ data: mockFiles });
+    mockOctokit.rest.repos.getContent.mockResolvedValue({
+      data: { content: Buffer.from('file content').toString('base64') },
+    });
+
+    await generatePRDescription(mockClient, 'test-model', mockOctokit);
+
+    expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
+      owner: 'test-org',
+      repo: 'test-repo',
+      pull_number: 123,
+      body: expect.any(String),
+    });
   });
 
-  it('should retry the function and return the result after successful execution', async () => {
-    // Mock the function to reject on the first two attempts and resolve on the third attempt
-    const mockFn = jest.fn()
-      .mockRejectedValueOnce('error')
-      .mockRejectedValueOnce('error')
-      .mockResolvedValue('success');
+  it('should handle errors when listing files or getting content', async () => {
+    mockOctokit.rest.pulls.listFiles.mockRejectedValue(new Error('List files error'));
+    mockOctokit.rest.repos.getContent.mockRejectedValue(new Error('Get content error'));
 
-    // Call the exponentialBackoff function with the mocked function
-    const result = await exponentialBackoff(mockFn, 3, 100);
-
-    // Assertions
-    expect(result).toBe('success');
-    expect(mockFn).toHaveBeenCalledTimes(3);
-    expect(setTimeout).toHaveBeenCalledTimes(2);
-    expect(setTimeout).toHaveBeenNthCalledWith(1, expect.any(Function), 100);
-    expect(setTimeout).toHaveBeenNthCalledWith(2, expect.any(Function), 200);
-  });
-});
-
-import { exponentialBackoff } from '../src/yourFile';
-
-describe('exponentialBackoff', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
-  });
-
-  it('should throw an error if maximum retries are reached', async () => {
-    // Mock the function to always reject
-    const mockFn = jest.fn().mockRejectedValue('error');
-
-    // Call the exponentialBackoff function with the mocked function
-    await expect(exponentialBackoff(mockFn, 3, 100)).rejects.toEqual('error');
-
-    // Assertions
-    expect(mockFn).toHaveBeenCalledTimes(4);
-    expect(setTimeout).toHaveBeenCalledTimes(3);
-    expect(setTimeout).toHaveBeenNthCalledWith(1, expect.any(Function), 100);
-    expect(setTimeout).toHaveBeenNthCalledWith(2, expect.any(Function), 200);
-    expect(setTimeout).toHaveBeenNthCalledWith(3, expect.any(Function), 400);
+    await expect(generatePRDescription(mockClient, 'test-model', mockOctokit)).rejects.toThrow();
   });
 });
