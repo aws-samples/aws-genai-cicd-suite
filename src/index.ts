@@ -4,8 +4,8 @@ import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedroc
 import { setTimeout } from 'timers/promises';
 
 // current we support typescript and python, while the python library is not available yet, we will use typescript as the default language
-// using abosolute path to import the functions from ut_ts.ts
-import { generateUnitTests, runUnitTests, generateTestReport } from '@/src/ut_ts';
+// using abosolute path to import the functions from testGenerator.ts
+import { generateUnitTests, runUnitTests, generateTestReport } from '@/src/testGenerator';
 import { invokeModel } from '@/src/utils';
 
 interface PullRequest {
@@ -31,6 +31,9 @@ interface PullFile {
 
 // Define the LanguageCode type
 type LanguageCode = 'en' | 'zh' | 'ja' | 'es' | 'fr' | 'de' | 'it';
+
+const PR_DESCRIPTION_HEADER = "🤖 AI-Generated PR Description (Powered by Amazon Bedrock)";
+const CODE_REVIEW_HEADER = "🔍 AI Code Review (Powered by Amazon Bedrock)";
 
 // Update the languageCodeToName object with the correct type
 const languageCodeToName: Record<LanguageCode, string> = {
@@ -109,7 +112,7 @@ Provide your PR description in the following format:
 </output_format>
 `;
 
-let statsSummary: {file: string, added: number, removed: number}[] = [];
+let statsSummary: {file: string, added: number, removed: number, summary?: string}[] = [];
 
 function calculateFilePatchNumLines(fileChange: string): { added: number, removed: number } {
   const lines = fileChange.split('\n');
@@ -127,6 +130,7 @@ function calculateFilePatchNumLines(fileChange: string): { added: number, remove
   return { added, removed };
 }
 
+
 export async function generatePRDescription(client: BedrockRuntimeClient, modelId: string, octokit: ReturnType<typeof getOctokit>): Promise<void> {
 
   const pullRequest = context.payload.pull_request as PullRequest;
@@ -142,7 +146,7 @@ export async function generatePRDescription(client: BedrockRuntimeClient, modelI
     try {
       if (file.status === 'removed') {
         const { added, removed } = calculateFilePatchNumLines(file.patch as string);
-        statsSummary.push({file: file.filename, added: 0, removed: removed});
+        statsSummary.push({file: file.filename, added: 0, removed: removed, summary: 'This file is removed in this PR'});
         return `${file.filename}: removed`;
       } else {
         const { data: content } = await octokit.rest.repos.getContent({
@@ -151,7 +155,8 @@ export async function generatePRDescription(client: BedrockRuntimeClient, modelI
           ref: pullRequest.head.sha,
         });
         const { added, removed } = calculateFilePatchNumLines(file.patch as string);
-        statsSummary.push({file: file.filename, added: added, removed: removed});
+        const summary = await generateFileSummary(client, modelId, file.patch as string);
+        statsSummary.push({file: file.filename, added: added, removed: removed, summary: summary});
         return `${file.filename}: ${file.status}`;
       }
     } catch (error) {
@@ -169,16 +174,29 @@ export async function generatePRDescription(client: BedrockRuntimeClient, modelI
   const payloadInput = prDescriptionTemplate;
   const prDescription = await invokeModel(client, modelId, payloadInput);
 
+  // Fix the table column width using div element and inline HTML
   const fixedDescription =
   `
-
 ## File Stats Summary
+
+File number involved in this PR: *{{FILE_NUMBER}}*, unfold to see the details:
+
+<details>
+
 The file changes summary is as follows:
-- File number involved in this PR: {{FILE_NUMBER}}
-- File changes summary:
+
+| <div style="width:150px">Files</div> | <div style="width:160px">Changes</div> | <div style="width:320px">Summary</div> |
+|:-------|:--------|:--------------|
 {{FILE_CHANGE_SUMMARY}}
+
+</details>
   `
-  const fileChangeSummary = statsSummary.map(file => `${file.file}: ${file.added} added, ${file.removed} removed`).join('\n');
+  const fileChangeSummary = statsSummary.map(file => {
+    // const fileName = file.file.length > 60 ? file.file.substring(0, 60) + '...' : file.file;
+    const fileName = file.file;
+    const changes = `${file.added} added, ${file.removed} removed`;
+    return `| ${fileName} | ${changes} | ${file.summary || ''} |`
+  }).join('\n');
   const fileNumber = statsSummary.length.toString();
   const updatedDescription = fixedDescription
     .replace('{{FILE_CHANGE_SUMMARY}}', fileChangeSummary)
@@ -187,12 +205,20 @@ The file changes summary is as follows:
   // append fixed template content to the generated PR description
   const prDescriptionWithStats = prDescription + updatedDescription;
 
+  // Prepend the header to the PR description
+  const prDescriptionWithHeader = `${PR_DESCRIPTION_HEADER}\n\n${prDescriptionWithStats}`;
+
   await octokit.rest.pulls.update({
     ...repo,
     pull_number: pullRequest.number,
-    body: prDescriptionWithStats,
+    body: prDescriptionWithHeader,
   });
   console.log('PR description updated successfully.');
+}
+
+async function generateFileSummary(client: BedrockRuntimeClient, modelId: string, patch: string): Promise<string> {
+  const prompt = `Summarize the following code changes into concise and clear description in less than 30 words:\n\n${patch}`;
+  return await invokeModel(client, modelId, prompt);
 }
 
 function splitIntoSoloFile(combinedCode: string): Record<string, string> {
@@ -528,12 +554,15 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
           continue;
         }
 
+        // Prepend the header to each review comment
+        const reviewWithHeader = `${CODE_REVIEW_HEADER}\n\n${review}`;
+
         // add the generated review comments to the end of per hunk
         const position = totalPosition + 1;
         reviewComments.push({
           path: file.filename,
           position: position,
-          body: review,
+          body: reviewWithHeader,
         });
         totalPosition += hunkLines.length;
       }

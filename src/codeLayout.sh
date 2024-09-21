@@ -1,8 +1,8 @@
 #!/bin/bash
-# Usage: ./code_layout.sh [REPO_DIR] [OUTPUT_FILE] [EXTRACT_MODE] [FILE_EXTENSIONS]
+# Usage: ./codeLayout.sh [REPO_DIR] [OUTPUT_FILE] [EXTRACT_MODE] [FILE_EXTENSIONS]
 # Description: Combine all code files in a repository into a single file, with option to extract functions or include whole file content
-# Example: ./code_layout.sh ~/projects/my_project combined_output.txt functions py js html css java cpp h cs
-# Example: ./code_layout.sh ~/projects/my_project combined_output.txt whole py js html css java cpp h cs
+# Example: ./codeLayout.sh ~/projects/my_project combined_output.txt functions py js html css java cpp h cs
+# Example: ./codeLayout.sh ~/projects/my_project combined_output.txt whole py js html css java cpp h cs
 
 # Directory of the repository (default to current directory if not specified)
 REPO_DIR="${1:-.}"

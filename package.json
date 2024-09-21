@@ -1,5 +1,5 @@
 {
-    "name": "aws-genai-cicd-suite",
+    "name": "intelli-ops",
     "version": "1.0.0",
     "description": "",
     "main": "dist/index.js",
@@ -7,7 +7,7 @@
         "prebuild": "npm install --save-dev @vercel/ncc",
         "build": "tsc -p tsconfig.build.json",
         "lint": "eslint .",
-        "package": "npm run build && rm ./dist/index.js || true && cp ./build/index.js ./dist/ && ncc build --license THIRD-PARTY -o dist && copyup -E dist/THIRD-PARTY . || true && del-cli dist/THIRD-PARTY || true && cp ./src/code_layout.sh ./dist/",
+        "package": "npm run build && rm ./dist/index.js || true && cp ./build/index.js ./dist/ && ncc build --license THIRD-PARTY -o dist && copyup -E dist/THIRD-PARTY . || true && del-cli dist/THIRD-PARTY || true && cp ./src/codeLayout.sh ./dist/",
         "test": "jest"
     },
     "keywords": [],
