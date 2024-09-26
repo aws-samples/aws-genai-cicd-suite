@@ -1,5 +1,104 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
+// Define the LanguageCode type
+export type LanguageCode = 'en' | 'zh' | 'ja' | 'es' | 'fr' | 'de' | 'it';
+
+// Full definition of PullRequest from GitHub API can be found at https://gist.github.com/GuillaumeFalourd/e53ec9b6bc783cce184bd1eec263799d
+export interface PullRequest {
+  title: string;
+  number: number;
+  body: string;
+  head: {
+    sha: string;
+    ref: string;
+  };
+  base: {
+    sha: string;
+  };
+}
+
+export interface PullFile {
+  filename: string;
+  status: string;
+  patch?: string;
+}
+
+// Update the languageCodeToName object with the correct type
+export const languageCodeToName: Record<LanguageCode, string> = {
+  'en': 'English',
+  'zh': 'Chinese',
+  'ja': 'Japanese',
+  'es': 'Spanish',
+  'fr': 'French',
+  'de': 'German',
+  'it': 'Italian',
+};
+
+// This function splits the content into chunks of maxChunkSize
+export function splitContentIntoChunks_deprecated(content: string, maxChunkSize: number): string[] {
+  const chunks: string[] = [];
+  let currentChunk = '';
+
+  content.split('\n').forEach(line => {
+    if (currentChunk.length + line.length > maxChunkSize) {
+      chunks.push(currentChunk);
+      currentChunk = '';
+    }
+    currentChunk += line + '\n';
+  });
+
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+export function shouldExcludeFile(filename: string, excludePatterns: string[]): boolean {
+  return excludePatterns.some(pattern => {
+    const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+    return regex.test(filename);
+  });
+}
+
+export function splitIntoSoloFile(combinedCode: string): Record<string, string> {
+  // split the whole combinedCode content into individual files (index.ts, index_test.ts, index.js) by recognize the character like: "// File: ./index.ts", filter the content with suffix ".tx" and not contain "test" in file name (index.ts),
+  const fileChunks: Record<string, string> = {};
+  const filePattern = /\/\/ File: \.\/(.+)/;
+  let currentFile = '';
+  let currentContent = '';
+
+  combinedCode.split('\n').forEach(line => {
+    const match = line.match(filePattern);
+    if (match) {
+      if (currentFile) {
+        fileChunks[currentFile] = currentContent.trim();
+      }
+      currentFile = match[1] as string;
+      currentContent = '';
+    } else {
+      currentContent += line + '\n';
+    }
+  });
+
+  if (currentFile) {
+    fileChunks[currentFile] = currentContent.trim();
+  }
+  return fileChunks;
+}
+
+export async function extractFunctions(content: string): Promise<string[]> {
+  // const functionPattern = /(?:export\s+)?(?:async\s+)?function\s+\w+\s*\([^)]*\)(?:\s*:\s*[^{]*?)?\s*{(?:[^{}]*|\{(?:[^{}]*|\{[^{}]*\})*\})*}/gs;
+  // const matches = content.match(functionPattern);
+  // return matches ? matches.map(match => match.trim()) : [];
+
+  // Dummy response for debugging purposes
+  return [
+    'export async function generateUnitTests(client: BedrockRuntimeClient, modelId: string, sourceCode: string): Promise<TestCase[]> { ... }',
+    'async function runUnitTests(testCases: TestCase[], sourceCode: string): Promise<void> { ... }',
+    'function generateTestReport(testCases: TestCase[]): Promise<void> { ... }',
+  ];
+}
 export async function exponentialBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number,
@@ -8,7 +107,6 @@ export async function exponentialBackoff<T>(
   let retries = 0;
   while (true) {
     try {
-      console.log(`Attempt ${retries + 1} of ${maxRetries + 1}`);
       const result = await fn();
       console.log(`Function executed successfully on attempt ${retries + 1}`);
       return result;
@@ -25,7 +123,8 @@ export async function exponentialBackoff<T>(
   }
 }
 
-export async function invokeModel(client: BedrockRuntimeClient, modelId: string, payloadInput: string): Promise<string> {
+// note the default temperature is 1 according to official documentation: https://docs.anthropic.com/en/api/complete
+export async function invokeModel(client: BedrockRuntimeClient, modelId: string, payloadInput: string, temperature: number = 0.6): Promise<string> {
     const maxRetries = 3;
     const initialDelay = 1000; // 1 second
 
@@ -63,6 +162,7 @@ export async function invokeModel(client: BedrockRuntimeClient, modelId: string,
         const payload = {
           anthropic_version: "bedrock-2023-05-31",
           max_tokens: 4096,
+          temperature: temperature,
           messages: [
             {
               role: "user",

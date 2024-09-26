@@ -20,3 +20,11 @@ build
 dist
 tmp.rm.later
 package-lock.json
+
+# Next.js, ignore the .next folder
+/web/.next
+
+# JS file in the src/preview folder
+/src/preview/*.js
+/src/*.js
+/test/*.js

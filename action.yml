@@ -1,4 +1,4 @@
-name: 'Intelligent DevOps using Amazon Bedrock'
+name: 'Intelligent DevOps (Intelli-Ops) using Amazon Bedrock'
 description: 'AI-powered GitHub Action for code reviews, PR descriptions, unit tests, and issue management using Amazon Bedrock.'
 inputs:
   github-token:
