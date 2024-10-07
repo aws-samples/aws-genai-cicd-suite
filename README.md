@@ -1,8 +1,8 @@
-# Intelli-Ops using AWS Bedrock
+# Streamline Your DevOps Pipeline with Generative AI
 
 ## Overview
 
-This Intelli-Ops is a GitHub Action & GitHub App hybrid solution to perform automated code reviews, PR generation, unit test generation and issue operation etc. using AWS Bedrock API.
+This application is a GitHub Action & GitHub App hybrid solution to perform automated code reviews, PR generation, unit test generation and issue operation etc. using AWS Bedrock API.
 The default model is Claude3 Sonnet, which is suitable for general purpose with optimized cost, we also support hosting your own model in Amazon SageMaker and use the specific model id prefixed with `sagemaker.<api url>` in the action options.
 
 ## Features Overview:
