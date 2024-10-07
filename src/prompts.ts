@@ -6,6 +6,7 @@ export class Inputs {
     rawSummary: string
     shortSummary: string
     fileName: string
+    filePath: string
     fileContent: string
     fileDiff: string
     patches: string
@@ -21,7 +22,8 @@ export class Inputs {
     snippets: string[] = []
     docComments: string = ''
     functionBody: string = ''
-    error: string = ''
+    generatedUnitTestCodeExecutionError: string = ''
+    generatedUnitTestCode: string = ''
 
     constructor(
         systemMessage = '',
@@ -30,15 +32,24 @@ export class Inputs {
         rawSummary = '',
         shortSummary = '',
         fileName = '',
+        filePath = '',
         fileContent = '',
         fileDiff = '',
-        functionBody = '',
-        hunkContent = '',
         patches = '',
         diff = '',
         commentChain = '',
         comment = '',
-        languageName = ''
+        languageName = '',
+
+        // code review
+        hunkContent = '',
+
+        // unit test generation
+        snippets: string[] = [],
+        docComments: string = '',
+        functionBody: string = '',
+        generatedUnitTestCodeExecutionError: string = '',
+        generatedUnitTestCode: string = ''
     ) {
         this.systemMessage = systemMessage
         this.title = title
@@ -46,6 +57,7 @@ export class Inputs {
         this.rawSummary = rawSummary
         this.shortSummary = shortSummary
         this.fileName = fileName
+        this.filePath = filePath
         this.fileContent = fileContent
         this.fileDiff = fileDiff
         this.functionBody = functionBody
@@ -65,12 +77,24 @@ export class Inputs {
         this.rawSummary,
         this.shortSummary,
         this.fileName,
+        this.filePath,
         this.fileContent,
         this.fileDiff,
         this.patches,
         this.diff,
         this.commentChain,
-        this.comment
+        this.comment,
+        this.languageName,
+
+        // code review
+        this.hunkContent,
+
+        // unit test generation
+        this.snippets,
+        this.docComments,
+        this.functionBody,
+        this.generatedUnitTestCodeExecutionError,
+        this.generatedUnitTestCode
       )
     }
   
@@ -86,6 +110,9 @@ export class Inputs {
         }
         if (this.fileName) {
           content = content.replace('{{fileName}}', this.fileName)
+        }
+        if (this.filePath) {
+            content = content.replace('{{file_path}}', this.filePath)
         }
         if (this.fileContent) {
             content = content.replace('{{file_content}}', this.fileContent)
@@ -111,8 +138,11 @@ export class Inputs {
         if (this.functionBody) {
             content = content.replace('{{function_body}}', this.functionBody)
         }
-        if (this.error) {
-            content = content.replace('{{error}}', this.error)
+        if (this.generatedUnitTestCodeExecutionError) {
+            content = content.replace('{{generated_unit_test_code_execution_error}}', this.generatedUnitTestCodeExecutionError)
+        }
+        if (this.generatedUnitTestCode) {
+            content = content.replace('{{generated_unit_test_code}}', this.generatedUnitTestCode)
         }
         return content
     }
@@ -123,13 +153,14 @@ export class Prompts {
     private snippets: string[];
     private docComments: string = '';
     private functionBody: string = '';
-    private error: string = '';
+    refinedPrompt: string;
     summarize: string
     summarizeReleaseNotes: string
 
-    constructor(private apiFunction: string = '', snippets: string[] = [], docComments: string = '', functionBody: string = '', error: string = '', summarize: string = '', summarizeReleaseNotes: string = '') {
+    constructor(private apiFunction: string = '', snippets: string[] = [], docComments: string = '', functionBody: string = '', summarize: string = '', summarizeReleaseNotes: string = '', refinedPrompt: string = '') {
       this.id = `prompt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       this.snippets = snippets;
+      this.refinedPrompt = refinedPrompt;
       this.summarize = summarize
       this.summarizeReleaseNotes = summarizeReleaseNotes
     }
@@ -256,7 +287,8 @@ The condition has removed the null check for \`nameObj\`. This change could pote
     // TODO: add concise review prompt, use the same format as detailed review prompt for now
     conciseReviewPrompt = this.detailedReviewPrompt
 
-/**
+
+    /**
 * Structured representation of a prompt we finally send to the model to generate test cases, which is a generation from another prompt.
 *
 * ```js
@@ -286,6 +318,7 @@ The condition has removed the null check for \`nameObj\`. This change could pote
 * The structured representation keeps track of these parts and provides methods
 * to assemble them into a textual prompt and complete them into a test case.
 */
+
     preProcessUnitTestGenerationPrompt = 
 `
 TODO
@@ -298,13 +331,14 @@ You are an expert TypeScript developer specializing in unit testing. Your task i
 </Task Context>
 
 <Code Context>
-File name:
+// File name:
 {{fileName}}
 
+// File path:
 File path:
 {{file_path}}
 
-Whole file content:
+// Whole file content:
 {{file_content}}
 
 Function to be tested:
@@ -313,12 +347,11 @@ Function to be tested:
 
 <Detailed Task Description>
 <Input and Output>
-Input: Whole file content and function to be tested.
-Output: Jest unit test code, structured as a JSON array of test cases, do not include any explanatory text outside of the JSON array, where each test case has the following format:
-  {
-    "name": "Test name",
-    "code": "The actual test code"
-  }
+Input: Code context including file name, file path, whole file content and function to be tested.
+Output: Jest unit test code, with fenced code blocks using the relevant language identifier where applicable, do not include any explanatory text outside of the fenced code blocks.
+\`\`\`typescript
+<Generated Unit Test Code>
+\`\`\`
 </Input and Output>
 
 <Generation Guidelines>
@@ -327,7 +360,7 @@ Output: Jest unit test code, structured as a JSON array of test cases, do not in
 - Use clear and descriptive test names.
 - Include comments in your test code to explain the purpose of each test.
 - Follow TypeScript and Jest best practices.
-- Import internal dependencies and mock external modules, all generated test cases will be placed in the same level folder as the file to be tested, e.g. if the file to be tested is in src/example.ts, the generated test cases will be in test/example.test.ts
+- Import internal dependencies and mock external modules in absolute path using file path, e.g. import { calculateDiscount } from 'src/example'.
 - Use jest.mock() to mock external dependencies like fs, path, and child_process.
 - Include setup and teardown code (beforeEach, afterEach) where necessary.
 - Use appropriate Jest matchers (e.g., toHaveBeenCalledWith, toThrow) for precise assertions.
@@ -369,10 +402,124 @@ export function calculateDiscount(price: number, discountPercentage: number): nu
 </Input>
 
 <Output>
-  {
-    "name": "Test calculateDiscount function with valid input",
-    "code": "import { calculateDiscount } from '../src/example';\n\ndescribe('calculateDiscount', () => {\n  it('should return the correct discount', () => {\n    expect(calculateDiscount(100, 10)).toBe(90);\n  });\n});"
+\`\`\`typescript
+import { calculateDiscount } from 'src/example'
+
+describe('calculateDiscount', () => {
+  it('should return the correct discount', () => {
+    expect(calculateDiscount(100, 10)).toBe(90);
+  });
+});
+\`\`\`
+</Output>
+</Example>
+`
+
+    unitTestGenerationRefinedPrompt = 
+`
+<Task Context>
+You are an expert TypeScript developer specializing in unit testing. Your task is to analyze the following TypeScript code, generated unit test code and error in the test case execution, then refine the generated unit test code accordingly.
+</Task Context>
+
+<Code Context>
+// File name:
+{{fileName}}
+
+// File path:  
+{{file_path}}
+
+// Whole file content:
+{{file_content}}
+
+// Function to be tested:
+{{function_to_be_tested}}
+
+// Generated unit test code:
+{{generated_unit_test_code}}
+
+// Error in the unit test execution:
+{{generated_unit_test_code_execution_error}}
+</Code Context>
+
+<Detailed Task Description>
+<Input and Output>
+Input: Code context including file name, file path, whole file content and function to be tested, generated unit test code and error in the test case execution.
+Output: Refined unit test code, with fenced code blocks using the relevant language identifier where applicable, do not include any explanatory text outside of the fenced code blocks.
+\`\`\`typescript
+<Refined Unit Test Code>
+\`\`\`
+</Input and Output>
+
+<Generation Guidelines>
+- Carefully read and understand the provided TypeScript code, generated unit test code and error in the test case execution.
+- Fix the error in the test case execution and refine the generated unit test code accordingly.
+- Ensure that the refined unit test code is correct and comprehensive.
+- Try to iterate the absolute path if the module can't be properly imported.
+</Generation Guidelines>
+
+<Example>
+<Input>
+// File name
+example.ts
+
+// File path
+src/example.ts
+
+// Whole file content
+export function otherFunction() {
+  return 'otherFunction'
+}
+
+export function calculateDiscount(price: number, discountPercentage: number): number {
+  if (price < 0 || discountPercentage < 0 || discountPercentage > 100) {
+    throw new Error('Invalid input parameters');
   }
+  
+  const discountAmount = price * (discountPercentage / 100);
+  return Number((price - discountAmount).toFixed(2));
+}
+
+// Function to be tested
+export function calculateDiscount(price: number, discountPercentage: number): number {
+  if (price < 0 || discountPercentage < 0 || discountPercentage > 100) {
+    throw new Error('Invalid input parameters');
+  }
+  
+  const discountAmount = price * (discountPercentage / 100);
+  return Number((price - discountAmount).toFixed(2));
+}
+
+// Generated unit test code
+import { calculateDiscount } from 'src/example'
+describe('calculateDiscount', () => {
+  it('should return the correct discount', () => {
+    expect(calculateDiscount(100, 10)).toBe(90);
+  });
+});
+
+// Error in the unit test execution
+Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 90
+Received: 90.00
+
+  4 |   it('should return the correct discount', () => {
+  5 |     expect(calculateDiscount(100, 10)).toBe(90);
+> 6 |   });
+    |   ^
+  7 | });
+
+</Input>
+
+<Output>
+\`\`\`typescript
+import { calculateDiscount } from 'src/example'
+describe('calculateDiscount', () => {
+  it('should return the correct discount', () => {
+    expect(calculateDiscount(100, 10)).toBeCloseTo(90, 2);
+  });
+});
+\`\`\`
 </Output>
 </Example>
 `
@@ -390,4 +537,7 @@ export function calculateDiscount(price: number, discountPercentage: number): nu
       return inputs.render(this.unitTestGenerationPrompt)
     }
 
+    renderUnitTestGenerationRefinedPrompt(inputs: Inputs): string {
+      return inputs.render(this.unitTestGenerationRefinedPrompt)
+    }
 }

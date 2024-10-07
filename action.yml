@@ -37,6 +37,10 @@ inputs:
     description: 'The folder path where unit tests should be generated based on the source code, only applicable when generate-unit-test is true'
     required: false
     default: ''
+  generate-unit-test-exclude-files:
+    description: 'Exclude file list, separated by comma, e.g. [*.md,*.json]'
+    required: false
+    default: ''
   output-language:
     description: 'Output language'
     required: false

@@ -1,37 +1,37 @@
 {
-    "compilerOptions": {
-      "allowUnreachableCode": false,
-      "allowUnusedLabels": false,
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["./*"]
-      },
-      "strict": true,
-      "exactOptionalPropertyTypes": false,
-      "noFallthroughCasesInSwitch": true,
-      "noImplicitOverride": true,
-      "noImplicitReturns": true,
-      "noPropertyAccessFromIndexSignature": true,
-      "noUncheckedIndexedAccess": true,
-      "noUnusedLocals": false,
-      "noUnusedParameters": false,
-      "module": "CommonJS",
-      "resolveJsonModule": true,
-      "outDir": "build",
-      "declaration": true,
-      "newLine": "lf",
-      "noEmitOnError": true,
-      "sourceMap": true,
-      "disableSizeLimit": true,
-      "forceConsistentCasingInFileNames": true,
-      "lib": [ "ES2020" ],
-      "target": "ES2020",
-      "noErrorTruncation": true,
-      "esModuleInterop": true
+  "compilerOptions": {
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
     },
-    "include": [
-      "src/**/*.ts",
-      // "test/**/*.ts"
-    ],
-    "exclude": [],
-  }  
+    "strict": true,
+    "exactOptionalPropertyTypes": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "module": "CommonJS",
+    "resolveJsonModule": true,
+    "outDir": "build",
+    "declaration": true,
+    "newLine": "lf",
+    "noEmitOnError": true,
+    "sourceMap": true,
+    "disableSizeLimit": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": [ "ES2020" ],
+    "target": "ES2020",
+    "noErrorTruncation": true,
+    "esModuleInterop": true
+  },
+  "include": [
+    "src/**/*.ts",
+    // "test/**/*.ts"
+  ],
+  "exclude": [],
+}  

@@ -8,9 +8,10 @@ import { setTimeout } from 'timers/promises';
 import { generateUnitTests, runUnitTests, generateTestReport } from '@/src/testGenerator';
 import { generatePRDescription } from '@/src/prGeneration';
 import { generateCodeReviewComment } from '@/src/codeReviewInline';
+import { generateUnitTestsSuite } from '@/src/preview/testGenerator';
 import { invokeModel, PullRequest } from '@/src/utils';
 
-export async function generateUnitTestsSuite(client: BedrockRuntimeClient, modelId: string, octokit: ReturnType<typeof getOctokit>, repo: { owner: string, repo: string }, unitTestSourceFolder: string): Promise<void> {
+export async function generateUnitTestsSuiteDeprecated(client: BedrockRuntimeClient, modelId: string, octokit: ReturnType<typeof getOctokit>, repo: { owner: string, repo: string }, unitTestSourceFolder: string): Promise<void> {
   const pullRequest = context.payload.pull_request as PullRequest;
   const branchName = pullRequest.head.ref;
   let allTestCases: any[] = [];
@@ -145,14 +146,15 @@ async function run(): Promise<void> {
     const awsRegion = core.getInput('aws-region');
     const modelId = core.getInput('model-id');
     const excludeFiles = core.getInput('generate-code-review-exclude-files');
+    const excludePatterns = excludeFiles ? excludeFiles.split(',').map(p => p.trim()) : [];
     const reviewLevel = core.getInput('generate-code-review-level');
     const generateCodeReview = core.getInput('generate-code-review');
     const generatePrDescription = core.getInput('generate-pr-description');
     const generateUnitTest = core.getInput('generate-unit-test');
     const outputLanguage = core.getInput('output-language');
     const unitTestSourceFolder = core.getInput('generate-unit-test-source-folder');
-
-    const excludePatterns = excludeFiles ? excludeFiles.split(',').map(p => p.trim()) : [];
+    const unitTestExcludeFiles = core.getInput('generate-unit-test-exclude-files');
+    const unitTestExcludePatterns = unitTestExcludeFiles ? unitTestExcludeFiles.split(',').map(p => p.trim()) : [];
 
     console.log(`GitHub Token: ${githubToken ? 'Token is set' : 'Token is not set'}`);
     console.log(`AWS Region: ${awsRegion}`);
@@ -163,7 +165,9 @@ async function run(): Promise<void> {
     console.log(`Review level: ${reviewLevel}`);
     console.log(`Generate PR description: ${generatePrDescription.toLowerCase() === 'true' ? 'true' : 'false'}`);
     console.log(`Generate unit test suite: ${generateUnitTest.toLowerCase() === 'true' ? 'true' : 'false'}`);
-    console.log(`Test folder path: ${unitTestSourceFolder}`);
+    console.log(`Generate unit test source folder: ${unitTestSourceFolder}`);
+    console.log(`Generate unit test exclude files: ${unitTestExcludeFiles}`);
+
     if (!githubToken) {
       throw new Error('GitHub token is not set');
     }
@@ -193,9 +197,20 @@ async function run(): Promise<void> {
 
     // branch to generate unit tests suite
     if (generateUnitTest.toLowerCase() === 'true') {
+      console.log('Start to generate unit test suite');
       if (!unitTestSourceFolder) {
         throw new Error('Test folder path is not specified');
       }
+      /* 
+      export async function generateUnitTestsSuite(
+        client: BedrockRuntimeClient,
+        modelId: string,
+        octokit: ReturnType<typeof getOctokit>,
+        excludePatterns: string[],
+        repo: { owner: string, repo: string },
+        unitTestSourceFolder: string
+      )  
+      */
       await generateUnitTestsSuite(bedrockClient, modelId, octokit, repo, unitTestSourceFolder);
     }
 

@@ -19,7 +19,7 @@
         "@aws-sdk/client-bedrock-runtime": "^3.621.0",
         "copyfiles": "^2.4.1",
         "del-cli": "^5.1.0",
-        "ts-jest": "^29.2.3"
+        "ts-jest": "^29.2.5"
     },
     "devDependencies": {
         "@types/jest": "^29.5.12",
