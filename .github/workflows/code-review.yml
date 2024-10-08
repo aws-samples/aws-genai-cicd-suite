@@ -56,16 +56,16 @@ jobs:
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
-      uses: aws-sample/aws-genai-cicd-suite@stable
+      uses: aws-samples/aws-genai-cicd-suite@stable
       with:
         # Automatic Provision: The GITHUB_TOKEN is automatically created and provided by GitHub for each workflow run. You don't need to manually create or store this token as a secret.
         github-token: ${{ secrets.GITHUB_TOKEN }}
         aws-region: us-east-1
         model-id: anthropic.claude-3-sonnet-20240229-v1:0
-        generate-code-review: 'false'
+        generate-code-review: 'true'
         generate-code-review-level: 'detailed'
         generate-code-review-exclude-files: '*.md,*.json,*.js'
-        generate-pr-description: 'false'
+        generate-pr-description: 'true'
         generate-unit-test: 'true'
         generate-unit-test-source-folder: 'debugging'
         # Removed the invalid input 'generate-unit-test-exclude-files'
