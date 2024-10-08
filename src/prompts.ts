@@ -454,7 +454,7 @@ Output: Refined unit test code, with fenced code blocks using the relevant langu
 - Carefully read and understand the provided TypeScript code, generated unit test code and error in the test case execution.
 - Fix the error in the test case execution and refine the generated unit test code accordingly.
 - Ensure that the refined unit test code is correct and comprehensive.
-- Try to iterate the absolute path if the module can't be properly imported.
+- Use the absolute path and avoid using relative path e.g. import { calculateDiscount } from 'src/example' instead of import { calculateDiscount } from './example' or import { calculateDiscount } from '../example' or import { calculateDiscount } from '../../example'.
 </Generation Guidelines>
 
 <Example>

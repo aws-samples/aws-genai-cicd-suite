@@ -42,15 +42,14 @@ const mockOctokit = {
           };
         }
       },
-      createOrUpdateFileContents: async ({ content }) => {
-        fs.writeFileSync('debug_generated_tests.ts', Buffer.from(content, 'base64').toString('utf8'));
-        console.log('Generated tests written to debug_generated_tests.ts');
-        return {};
-      },
-    },
-    git: {
-      createRef: async () => {
-        console.log('Mock: Created tag auto-unit-test-baseline');
+      createOrUpdateFileContents: async ({ path, content }) => {
+        if (path.endsWith('.test.ts')) {
+          fs.writeFileSync('sample.test.ts', Buffer.from(content, 'base64').toString('utf8'));
+          console.log('Generated tests written to sample.test.ts');
+        } else if (path === 'test/AUTO_GENERATED_TESTS_README.md') {
+          fs.writeFileSync('AUTO_GENERATED_TESTS_README.md', Buffer.from(content, 'base64').toString('utf8'));
+          console.log('Generated README written to AUTO_GENERATED_TESTS_README.md');
+        }
         return {};
       },
     },
@@ -91,12 +90,13 @@ async function main() {
   }
 
   // Check if test cases are generated
-  const testCases = fs.readFileSync('debug_generated_tests.ts', 'utf8');
-  console.log(testCases);
+  const testCases = fs.readFileSync('sample.test.ts', 'utf8');
+  console.log("The generated test cases are: ", testCases);
 
   // Clean up the test environment
-  fs.unlinkSync('sample.ts');
-  fs.unlinkSync('debug_generated_tests.ts');
+  // fs.unlinkSync('sample.ts');
+  // fs.unlinkSync('sample.test.ts');
+  // fs.unlinkSync('AUTO_GENERATED_TESTS_README.md');
 }
 
 main();
