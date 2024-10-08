@@ -17,7 +17,7 @@ build
 .vercel
 .aider*
 /tmp
-dist
+
 tmp.rm.later
 package-lock.json
 
