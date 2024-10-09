@@ -68,88 +68,102 @@ async function generateFileSummary(client: BedrockRuntimeClient, modelId: string
 }
 
 export async function generatePRDescription(client: BedrockRuntimeClient, modelId: string, octokit: ReturnType<typeof getOctokit>): Promise<void> {
+  const pullRequest = context.payload.pull_request as PullRequest;
+  const repo = context.repo;
 
-    const pullRequest = context.payload.pull_request as PullRequest;
-    const repo = context.repo;
-  
-    // fetch the list of files changed in the PR each time since the file can be changed in operation like unit test generation, code review, etc.
-    const { data: files } = await octokit.rest.pulls.listFiles({
-      ...repo,
-      pull_number: pullRequest.number,
-    });
-  
-    const fileNameAndStatus = await Promise.all(files.map(async (file) => {
-      try {
-        if (file.status === 'removed') {
-          const { added, removed } = calculateFilePatchNumLines(file.patch as string);
-          statsSummary.push({file: file.filename, added: 0, removed: removed, summary: 'This file is removed in this PR'});
-          return `${file.filename}: removed`;
-        } else {
-          const { data: content } = await octokit.rest.repos.getContent({
-            ...repo,
-            path: file.filename,
-            ref: pullRequest.head.sha,
-          });
-          const { added, removed } = calculateFilePatchNumLines(file.patch as string);
-          const summary = await generateFileSummary(client, modelId, file.patch as string);
-          statsSummary.push({file: file.filename, added: added, removed: removed, summary: summary});
-          return `${file.filename}: ${file.status}`;
-        }
-      } catch (error) {
-        if ((error as any).status === 404) {
-          console.log(`File ${file.filename} not found in the repository`);
-          return `${file.filename}: not found`;
-        }
-        return `${file.filename}: error`;
+  // Fetch the current PR description
+  const { data: currentPR } = await octokit.rest.pulls.get({
+    ...repo,
+    pull_number: pullRequest.number,
+  });
+  const originalDescription = currentPR.body || '';
+
+  // fetch the list of files changed in the PR each time since the file can be changed in operation like unit test generation, code review, etc.
+  const { data: files } = await octokit.rest.pulls.listFiles({
+    ...repo,
+    pull_number: pullRequest.number,
+  });
+
+  const fileNameAndStatus = await Promise.all(files.map(async (file) => {
+    try {
+      if (file.status === 'removed') {
+        const { added, removed } = calculateFilePatchNumLines(file.patch as string);
+        statsSummary.push({file: file.filename, added: 0, removed: removed, summary: 'This file is removed in this PR'});
+        return `${file.filename}: removed`;
+      } else {
+        const { data: content } = await octokit.rest.repos.getContent({
+          ...repo,
+          path: file.filename,
+          ref: pullRequest.head.sha,
+        });
+        const { added, removed } = calculateFilePatchNumLines(file.patch as string);
+        const summary = await generateFileSummary(client, modelId, file.patch as string);
+        statsSummary.push({file: file.filename, added: added, removed: removed, summary: summary});
+        return `${file.filename}: ${file.status}`;
       }
-    }));
-  
-    const prDescriptionTemplate = pr_generation_prompt.replace('[Insert the code change to be referenced in the PR description]', fileNameAndStatus.join('\n'));
-  
-    // invoke model to generate complete PR description
-    const payloadInput = prDescriptionTemplate;
-    const prDescription = await invokeModel(client, modelId, payloadInput);
-  
-    // Fix the table column width using div element and inline HTML
-    const fixedDescription =
-    `
+    } catch (error) {
+      if ((error as any).status === 404) {
+        console.log(`File ${file.filename} not found in the repository`);
+        return `${file.filename}: not found`;
+      }
+      return `${file.filename}: error`;
+    }
+  }));
 
+  const prDescriptionTemplate = pr_generation_prompt.replace('[Insert the code change to be referenced in the PR description]', fileNameAndStatus.join('\n'));
+
+  // Generate the new PR description
+  const payloadInput = prDescriptionTemplate;
+  const newPrDescription = await invokeModel(client, modelId, payloadInput);
+
+  // Fix the table column width using div element and inline HTML
+  const fixedDescription = `
 ## File Stats Summary
-  
-  File number involved in this PR: *{{FILE_NUMBER}}*, unfold to see the details:
-  
-  <details>
-  
-  The file changes summary is as follows:
-  
-  | <div style="width:150px">Files</div> | <div style="width:160px">Changes</div> | <div style="width:320px">Change Summary</div> |
-  |:-------|:--------|:--------------|
-  {{FILE_CHANGE_SUMMARY}}
-  
-  </details>
-    `
-    const fileChangeSummary = statsSummary.map(file => {
-      // const fileName = file.file.length > 60 ? file.file.substring(0, 60) + '...' : file.file;
-      const fileName = file.file;
-      const changes = `${file.added} added, ${file.removed} removed`;
-      return `| ${fileName} | ${changes} | ${file.summary || ''} |`
-    }).join('\n');
-    const fileNumber = statsSummary.length.toString();
-    const updatedDescription = fixedDescription
-      .replace('{{FILE_CHANGE_SUMMARY}}', fileChangeSummary)
-      .replace('{{FILE_NUMBER}}', fileNumber);
-  
-    // append fixed template content to the generated PR description
-    const prDescriptionWithStats = prDescription + updatedDescription;
-  
-    // Prepend the header to the PR description
-    const prDescriptionWithHeader = `${PR_DESCRIPTION_HEADER}\n\n${prDescriptionWithStats}`;
-  
-    await octokit.rest.pulls.update({
-      ...repo,
-      pull_number: pullRequest.number,
-      body: prDescriptionWithHeader,
-    });
-    console.log('PR description updated successfully.');
-  }
-  
+
+File number involved in this PR: *{{FILE_NUMBER}}*, unfold to see the details:
+
+<details>
+
+The file changes summary is as follows:
+
+| <div style="width:150px">Files</div> | <div style="width:160px">Changes</div> | <div style="width:320px">Change Summary</div> |
+|:-------|:--------|:--------------|
+{{FILE_CHANGE_SUMMARY}}
+
+</details>
+  `;
+
+  const fileChangeSummary = statsSummary.map(file => {
+    const fileName = file.file;
+    const changes = `${file.added} added, ${file.removed} removed`;
+    return `| ${fileName} | ${changes} | ${file.summary || ''} |`;
+  }).join('\n');
+  const fileNumber = statsSummary.length.toString();
+  const updatedDescription = fixedDescription
+    .replace('{{FILE_CHANGE_SUMMARY}}', fileChangeSummary)
+    .replace('{{FILE_NUMBER}}', fileNumber);
+
+  // Combine the new PR description with the stats
+  const aiGeneratedContent = newPrDescription + updatedDescription;
+
+  // Create the foldable AI-generated content
+  const foldableContent = `
+<details>
+<summary>${PR_DESCRIPTION_HEADER}</summary>
+
+${aiGeneratedContent}
+
+</details>
+`;
+
+  // Combine the original description with the foldable AI-generated content
+  const finalDescription = `${originalDescription}\n\n${foldableContent}`;
+
+  // Update the PR with the combined description
+  await octokit.rest.pulls.update({
+    ...repo,
+    pull_number: pullRequest.number,
+    body: finalDescription,
+  });
+  console.log('PR description updated successfully with appended AI-generated content.');
+}
