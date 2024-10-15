@@ -17,6 +17,20 @@ if (!process.env.GITHUB_APP_TOKEN) {
 const octokit = new Octokit({ auth: process.env.GITHUB_APP_TOKEN });
 console.log("GitHub App Token is set:", !!process.env.GITHUB_APP_TOKEN);
 
+/*
+Review comments: Directly reply to a review comment made by IBT Bot. Example:
+-- I pushed a fix in commit <commit_id>, please review it.
+-- Generate unit testing code for this file.
+Open a follow-up GitHub issue for this discussion.
+Files and specific lines of code (under the "Files changed" tab): Tag @IBTBot in a new review comment at the desired location with your query. Examples:
+-- @IBTBot generate unit testing code for this file.
+-- @IBTBot modularize this function.
+PR comments: Tag @IBTBot in a new PR comment to ask questions about the PR branch. For the best results, please provide a very specific query, as very limited context is provided in this mode. Examples:
+-- @IBTBot gather interesting stats about this repository and render them as a table. Additionally, render a pie chart showing the language distribution in the codebase.
+-- @IBTBot read src/utils.ts and generate unit testing code.
+-- @IBTBot read the files in the src/scheduler package and generate a class diagram using mermaid and a README in the markdown format.
+-- @IBTBot help me debug IBT Bot configuration file, not for now.
+*/
 app.post('/webhook', async (req, res) => {
   const event = req.body as WebhookEvent;
   const githubEvent = req.headers["x-github-event"] as string;

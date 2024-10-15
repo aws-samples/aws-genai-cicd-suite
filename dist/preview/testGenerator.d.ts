@@ -37,3 +37,18 @@ export declare function generateUnitTestsSuite(client: BedrockRuntimeClient, mod
     owner: string;
     repo: string;
 }, unitTestSourceFolder: string): Promise<void>;
+export declare function generateTestCasesForFile(client: BedrockRuntimeClient, modelId: string, fileMeta: {
+    fileName: string;
+    filePath: string;
+    fileContent: string;
+    rootDir: string;
+}): Promise<{
+    generatedTests: string[];
+    coverageSummary: ICoverageSummary;
+    testResults: Array<ITestInfo & {
+        outcome: {
+            status: string;
+            error?: string;
+        };
+    }>;
+}>;

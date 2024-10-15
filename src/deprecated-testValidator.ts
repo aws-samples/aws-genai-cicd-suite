@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { TestCase } from './testUtils';
+import { TestCase } from './deprecated-testUtils';
 
 export async function validateTestCases(testCases: TestCase[], sourceCode: string): Promise<TestCase[]> {
     const validatedTestCases: TestCase[] = [];

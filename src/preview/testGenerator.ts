@@ -402,7 +402,7 @@ export async function generateUnitTestsSuite(
     }
 }
 
-async function generateTestCasesForFile(
+export async function generateTestCasesForFile(
     client: BedrockRuntimeClient,
     modelId: string,
     fileMeta: {
