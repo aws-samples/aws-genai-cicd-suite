@@ -68,7 +68,7 @@ jobs:
         generate-code-review-level: 'detailed'
         generate-code-review-exclude-files: '*.md,*.json,*.js'
         generate-pr-description: 'true'
-        generate-unit-test: 'true'
+        generate-unit-test: 'false'
         generate-unit-test-source-folder: 'debugging'
         # Removed the invalid input 'generate-unit-test-exclude-files'
         # output-language: 'zh'

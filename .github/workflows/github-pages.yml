@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'  # Only trigger on changes in web folder
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'  # or whichever version you're using
+
+    - name: Install dependencies
+      working-directory: ./web
+      run: npm ci
+
+    - name: Build
+      working-directory: ./web
+      run: npm run build
+
+    - name: Export
+      working-directory: ./web
+      run: npx next export
+
+    # By adding an empty .nojekyll file to the root of your GitHub Pages branch, we tell GitHub not to process site with Jekyll, ensures that Next.js build is served exactly as it was built, also to preserving underscore prefixed directories
+    - name: Create .nojekyll file
+      run: touch ./web/out/.nojekyll
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./web/out
+        # This parameter specifies the branch where the built site will be published. By default, it's set to 'gh-pages', but you can uncomment and modify this line if you want to publish to a different branch. For most GitHub Pages deployments, using 'gh-pages' is the standard.
+        publish_branch: gh-pages
+        force_orphan: true
