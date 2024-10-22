@@ -12,6 +12,7 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
+    environment: AWS_ROLE_TO_ASSUME
     permissions:
       # read repository contents and write pull request comments
       id-token: write
@@ -54,7 +55,8 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         # using repository secret to get the role arn
-        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        # role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME_VAR }}
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
