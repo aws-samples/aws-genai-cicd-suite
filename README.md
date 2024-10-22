@@ -235,6 +235,7 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
+    # environment: AWS_ROLE_TO_ASSUME
     permissions:
       # read repository contents and write pull request comments
       id-token: write
@@ -276,7 +277,8 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        # Go to your repo -> Settings -> Secrets and variables -> Actions -> New repository secret, then add the secret name as e.g. AWS_ROLE_TO_ASSUME, and the value as the role arn, e.g. arn:aws:iam::123456789012:role/role-name, then reference it in the workflow as ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        # Go to your repo -> Settings -> Secrets and variables -> Actions -> New repository secret, then add the secret name as e.g. AWS_ROLE_TO_ASSUME, and the value as the role arn, e.g. arn:aws:iam::123456789012:role/role-name, then reference it in the workflow as ${{ secrets.AWS_ROLE_TO_ASSUME }}, note you might need to create a environment variable instead of secret for the role arn, to allow PR from other users (not the repo owner) have access to the role.
+        # role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME_VAR }}
         role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
         aws-region: us-east-1
 
