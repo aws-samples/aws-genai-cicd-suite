@@ -25,6 +25,9 @@ export class Inputs {
     generatedUnitTestCodeExecutionError: string = ''
     generatedUnitTestCode: string = ''
 
+    // app intention classification
+    userQuery: string = ''
+
     constructor(
         systemMessage = '',
         title = '',
@@ -49,7 +52,10 @@ export class Inputs {
         docComments: string = '',
         functionBody: string = '',
         generatedUnitTestCodeExecutionError: string = '',
-        generatedUnitTestCode: string = ''
+        generatedUnitTestCode: string = '',
+
+        // app intention classification
+        userQuery: string = ''
     ) {
         this.systemMessage = systemMessage
         this.title = title
@@ -94,7 +100,10 @@ export class Inputs {
         this.docComments,
         this.functionBody,
         this.generatedUnitTestCodeExecutionError,
-        this.generatedUnitTestCode
+        this.generatedUnitTestCode,
+
+        // app intention classification
+        this.userQuery
       )
     }
   
@@ -143,6 +152,9 @@ export class Inputs {
         }
         if (this.generatedUnitTestCode) {
             content = content.replace('{{generated_unit_test_code}}', this.generatedUnitTestCode)
+        }
+        if (this.userQuery) {
+            content = content.replace('{{user_query}}', this.userQuery)
         }
         return content
     }
@@ -201,7 +213,7 @@ Input: hunks content with hunk headers. Lines starting with '+' are additions, a
 + This is the new line 1.
 + This is an unchanged line.
 @@ is the hunk header that shows where the changes are and how many lines are changed. In this case, it indicates that the changes start at line 1 of the old file and affect 3 lines, and start at line 1 of the new file and affect 2 lines
-Additional Context: PR title, description, summaries and comment chains.
+Additional Context: PR title, PR description, summaries.
 
 Output: Review the input following the <Review Guidelines>, and output the review comments in the following format:
 - The review comment consists of: one sentence provide specific actionable feedback on the code change with bolded markdown text, and explanation of the feedback with exact line number ranges in new hunks in markdown format. Start and end line numbers must be within the same hunk. For single-line comments, start=end line number.
@@ -210,7 +222,7 @@ Output: Review the input following the <Review Guidelines>, and output the revie
 - Do not use \`suggestion\` code blocks.
 - XML tag must not be outputted.
 - For fixes, use \`diff\` code blocks, marking changes with \`+\` or \`-\`. The line number range for comments with fix snippets must exactly match the range to replace in the new hunk.
-- If there are no issues found or simple enough on a line range, you MUST respond with the text \`Looks Good To Me!\` for that line range in the review section only, no more output otherwise.
+- If there are no issues found or simple enough on a line range, you MUST respond with the text \`Looks Good To Me!\` in the beginning for that line range in the review section only, no more output otherwise.
 - Limit the total response within 100 words, the output language should be {{language_name}}.
 - Refer to the <Examples> below for the exact format of the output.
 </Input and Output>
@@ -286,7 +298,6 @@ The condition has removed the null check for \`nameObj\`. This change could pote
 `
     // TODO: add concise review prompt, use the same format as detailed review prompt for now
     conciseReviewPrompt = this.detailedReviewPrompt
-
 
     /**
 * Structured representation of a prompt we finally send to the model to generate test cases, which is a generation from another prompt.
@@ -454,7 +465,7 @@ Output: Refined unit test code, with fenced code blocks using the relevant langu
 - Carefully read and understand the provided TypeScript code, generated unit test code and error in the test case execution.
 - Fix the error in the test case execution and refine the generated unit test code accordingly.
 - Ensure that the refined unit test code is correct and comprehensive.
-- Try to iterate the absolute path if the module can't be properly imported.
+- Use the absolute path and avoid using relative path e.g. import { calculateDiscount } from 'src/example' instead of import { calculateDiscount } from './example' or import { calculateDiscount } from '../example' or import { calculateDiscount } from '../../example'.
 </Generation Guidelines>
 
 <Example>
@@ -524,6 +535,67 @@ describe('calculateDiscount', () => {
 </Example>
 `
 
+    intentionClassificationPrompt =
+`
+<Task Context>
+You are an AI assistant for a GitHub repository, designed to help users with various repository-related tasks.
+</Task Context>
+
+<Tone Context>
+Maintain a helpful and professional tone, focusing on accurately classifying user queries.
+</Tone Context>
+
+<Background Data>
+You have access to repository statistics, code analysis tools, and configuration files.
+</Background Data>
+
+<Detailed Task Description>
+
+<Input and Output>
+Input: {{user_query}}
+Output: Classify the user's query into one of the predefined categories, respond with only the category name, nothing else.
+</Input and Output>
+
+<Guidelines>
+- If the query doesn't fit any category, classify it as "Other (general query)".
+- Think step by step, reasoning through the query and the context of the repository
+- Do not attempt to execute any actions; your task is solely classification.
+- Compare the query to the predefined categories and examples, and choose the most appropriate category.
+</Guidelines>
+
+<Categories>
+- Code review and analysis
+- Repository management
+- Documentation tasks
+- GitHub Actions and CI/CD operations
+- Other (general query)
+</Categories>
+</Detailed Task Description>
+
+<Examples>
+<Input>
+I pushed a fix in commit 4a8fd9f, please review it.
+</Input>
+<Output>
+Code review and analysis
+</Output>
+
+<Input>
+Summarize stats about this repository and render them as a table. Additionally, render a pie chart showing the language distribution in the codebase.
+</Input>
+<Output>
+Repository management
+</Output
+
+<Input>
+Generate a Pull Request description for this PR.
+</Input>
+<Output>
+Documentation tasks
+</Output>
+</Examples>
+`
+
     renderDetailedReviewPrompt(inputs: Inputs): string {
       return inputs.render(this.detailedReviewPrompt)
     }
@@ -539,5 +611,9 @@ describe('calculateDiscount', () => {
 
     renderUnitTestGenerationRefinedPrompt(inputs: Inputs): string {
       return inputs.render(this.unitTestGenerationRefinedPrompt)
+    }
+
+    renderIntentionClassificationPrompt(inputs: Inputs): string {
+      return inputs.render(this.intentionClassificationPrompt)
     }
 }

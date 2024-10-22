@@ -3,9 +3,9 @@ import * as path from 'path';
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { execSync } from 'child_process';
 import { setTimeout } from 'timers/promises';
-import { validateTestCases } from './testValidator';
-import { analyzeCoverage } from './coverageAnalyzer';
-import { TestCase, generateFakeResponse, createPrompt } from './testUtils';
+import { validateTestCases } from './deprecated-testValidator';
+import { analyzeCoverage } from './deprecated-coverageAnalyzer';
+import { TestCase, generateFakeResponse, createPrompt } from './deprecated-testUtils';
 import { invokeModel } from './utils';
 // Remove the duplicate TestCase interface and generateFakeResponse function
 

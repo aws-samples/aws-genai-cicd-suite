@@ -19,7 +19,8 @@ export declare class Inputs {
     functionBody: string;
     generatedUnitTestCodeExecutionError: string;
     generatedUnitTestCode: string;
-    constructor(systemMessage?: string, title?: string, description?: string, rawSummary?: string, shortSummary?: string, fileName?: string, filePath?: string, fileContent?: string, fileDiff?: string, patches?: string, diff?: string, commentChain?: string, comment?: string, languageName?: string, hunkContent?: string, snippets?: string[], docComments?: string, functionBody?: string, generatedUnitTestCodeExecutionError?: string, generatedUnitTestCode?: string);
+    userQuery: string;
+    constructor(systemMessage?: string, title?: string, description?: string, rawSummary?: string, shortSummary?: string, fileName?: string, filePath?: string, fileContent?: string, fileDiff?: string, patches?: string, diff?: string, commentChain?: string, comment?: string, languageName?: string, hunkContent?: string, snippets?: string[], docComments?: string, functionBody?: string, generatedUnitTestCodeExecutionError?: string, generatedUnitTestCode?: string, userQuery?: string);
     clone(): Inputs;
     render(content: string): string;
 }
@@ -68,8 +69,10 @@ export declare class Prompts {
     preProcessUnitTestGenerationPrompt: string;
     unitTestGenerationPrompt: string;
     unitTestGenerationRefinedPrompt: string;
+    intentionClassificationPrompt: string;
     renderDetailedReviewPrompt(inputs: Inputs): string;
     renderConciseReviewPrompt(inputs: Inputs): string;
     renderUnitTestGenerationPrompt(inputs: Inputs): string;
     renderUnitTestGenerationRefinedPrompt(inputs: Inputs): string;
+    renderIntentionClassificationPrompt(inputs: Inputs): string;
 }

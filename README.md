@@ -3,9 +3,11 @@
 ## Overview
 
 This application is a GitHub Action & GitHub App hybrid solution to perform automated code reviews, PR generation, unit test generation and issue operation etc. using AWS Bedrock API.
-The default model is Claude3 Sonnet, which is suitable for general purpose with optimized cost, we also support hosting your own model in Amazon SageMaker and use the specific model id prefixed with `sagemaker.<api url>` in the action options.
+The default model is Claude3 Sonnet, which is suitable for general purpose with optimized cost, you can change to other models supported by Amazon Bedrock in the action options.
 
 ## Features Overview:
+
+[![Feature Tutorial](https://img.youtube.com/vi/0RtqGIHk9bY/0.jpg)](https://www.youtube.com/watch?v=0RtqGIHk9bY "Feature Tutorial")
 
 ### PR Content Generation:
 
@@ -161,7 +163,7 @@ Create a GitHub Actions workflow file in your repository .github/workflows direc
 
 ```yaml
 - name: Code review using AWS Bedrock
-  uses: yike5460/intelli-ops@stable
+  uses: aws-sample/aws-genai-cicd-suite@stable
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     aws-region: us-east-1
@@ -171,7 +173,7 @@ Create a GitHub Actions workflow file in your repository .github/workflows direc
 
 ```yaml
 - name: Code review using AWS Bedrock
-    uses: yike5460/intelli-ops@stable
+    uses: aws-sample/aws-genai-cicd-suite@stable
     with:
     # Automatic Provision: The GITHUB_TOKEN is automatically created and provided by GitHub for each workflow run. You don't need to manually create or store this token as a secret.
     github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -279,7 +281,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
-      uses: yike5460/intelli-ops@stable
+      uses: aws-sample/aws-genai-cicd-suite@stable
       with:
         # Automatic Provision: The GITHUB_TOKEN is automatically created and provided by GitHub for each workflow run. You don't need to manually create or store this token as a secret.
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -294,10 +296,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-#### Using model hosted on Amazon SageMaker
-
-Instead of using the default model with Amazon Bedrock, you can also use your own model hosted on Amazon SageMaker. Refer to the sample notebook [Here](./notebook/llama2-13b.ipynb) to host your own model on Amazon SageMaker along with API Gateway to expose the RESTful endpoint, then use the model id prefixed with `sagemaker.<api url>` in the action options.
 
 ### Step 3 (Optional): Create the GitHub App to perform issue operation
 Go to app folder, run `npm run start` to start the server (make sure it have the network connection to receive GitHub events and previlege to access the Amazon Bedrock), then login to your GitHub, navigate to Settings -> Developer settings -> GitHub Apps -> New GitHub App, or click [here](https://github.com/settings/apps/new) to create a new GitHub App, fill in the required fields, and set the webhook URL to your server address http:<IP address>:3000/webhook, then click `Create GitHub App`.
