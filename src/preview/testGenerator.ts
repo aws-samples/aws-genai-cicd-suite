@@ -288,7 +288,9 @@ export async function generateUnitTestsSuite(
 
     if (allTestCases.length === 0) {
         console.warn('No test cases generated. Returning empty array.');
-        throw new Error('No test cases generated. Returning empty array.');
+        // TODO: Add a comment to the PR to indicate no test cases were generated, now we just log a warning and return
+        // throw new Error('No test cases generated. Returning empty array.');
+        return;
     }
 
     allTestCases = await removeDuplicateImports(allTestCases);
