@@ -13,6 +13,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     environment: AWS_ROLE_TO_ASSUME
+
     permissions:
       # read repository contents and write pull request comments
       id-token: write
@@ -42,20 +43,27 @@ jobs:
         npm list @actions/github
       shell: bash
 
-    - name: Debug GitHub Token
+    - name: Debug GitHub Token and environment variables
       run: |
         if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
           echo "GitHub Token is set"
         else
           echo "GitHub Token is not set"
         fi
+        if [ -n "${{ vars.AWS_ROLE_TO_ASSUME_VAR }}" ]; then
+          echo "Role to Assume is set"
+        else
+          echo "Role to Assume is not set"
+        fi
+
+    - name: Debug Environment Variables
+      run: env | sort
 
     # assume the specified IAM role and set up the AWS credentials for use in subsequent steps.
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        # using repository secret to get the role arn
-        # role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        # using repository environment variable to get the role arn
         role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME_VAR }}
         aws-region: us-east-1
 
