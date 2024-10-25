@@ -110,7 +110,7 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
           console.log("The full review skipped due to LGTM is: ", review);
           continue;
         }
-        console.log("Review for file: ", file.filename, "hunk: ", hunkIndex, "is: ", review);
+        // console.log("Review for file: ", file.filename, "hunk index #", hunkIndex, ":\n", review);
         // Parse multiple comments from the review according to current prompt template, example output:
         /* 
         8-8:
@@ -132,20 +132,30 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
         ```
         */
         const comments = parseReviewComments(review);
-
+        console.log("Parsed comments: ", comments);
         for (const comment of comments) {
           const { startLine, endLine, body } = comment;
           // Calculate the actual position in the file
           const hunkHeaderMatch = hunkLines[0] ? hunkLines[0].match(/^@@ -\d+,\d+ \+(\d+),/) : null;
           const hunkStartLine = hunkHeaderMatch && hunkHeaderMatch[1] ? parseInt(hunkHeaderMatch[1]) : 1;
-          // We add 1 to calculate the correct position because: 1. GitHub's API uses 1-based indexing for line numbers; 2. The position should account for the hunk header line
-          const position = totalPosition + (startLine - hunkStartLine + 1);
+          
+          // Calculate the position relative to the hunk start
+          const relativePosition = startLine - hunkStartLine;
+          
+          // We add 1 to calculate the correct position because:
+          // 1. GitHub's API uses 1-based indexing for line numbers
+          // 2. The position should account for the hunk header line
+          const position = totalPosition + relativePosition + 1;
+          
+          // Ensure the position is not negative
+          const finalPosition = Math.max(1, position);
+
           // Prepend the header to each review comment
           const reviewWithHeader = `${CODE_REVIEW_HEADER}\n\n${body}`;
           // The position value equals the number of lines down from the first "@@" hunk header in the file you want to add a comment. The line just below the "@@" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file.
           reviewComments.push({
             path: file.filename,
-            position: position,
+            position: finalPosition,
             body: reviewWithHeader,
           });
         }
@@ -158,7 +168,7 @@ export async function generateCodeReviewComment(bedrockClient: BedrockRuntimeCli
       ignoredFilesDetails.push(`${file.filename} is excluded by exclude rules`);
     }
   }
-  
+  console.log("Review comments: ", reviewComments);
   // we always post the summary even if there is no review comments, so that we can let the user know the review level and the number of files processed
   if (reviewComments.length > 0 || additionalCommentsCount > 0) {
     let summaryTemplate = `
@@ -217,11 +227,39 @@ ${additionalCommentsDetails.map(file => `- ${file}`).join('\n')}
     console.log('No review comments to post.');
   }
 }
-
+/**
+ * Parses review comments from a string input.
+ * 
+ * Expected input schema:
+ * - Each comment should start with a line number range in the format "start-end:"
+ * - The comment body follows the line number range on the same line and can span multiple lines
+ * - Comments are separated by blank lines or new line number ranges
+ * 
+ * @param review A string containing the review comments
+ * @returns An array of parsed comments, each with startLine, endLine, and body properties
+ * 
+ * Sample input:
+ * ```
+ * 10-15: This is a comment for lines 10 to 15
+ * It can span multiple lines
+ * 
+ * 20-25: Another comment for lines 20 to 25
+ * 30-30: Single line comment
+ * ```
+ * 
+ * Sample output:
+ * ```
+ * [
+ *   { startLine: 10, endLine: 15, body: "This is a comment for lines 10 to 15\nIt can span multiple lines" },
+ *   { startLine: 20, endLine: 25, body: "Another comment for lines 20 to 25" },
+ *   { startLine: 30, endLine: 30, body: "Single line comment" }
+ * ]
+ * ```
+ */
 function parseReviewComments(review: string): { startLine: number; endLine: number; body: string }[] {
-  const comments = [];
+  const comments: { startLine: number; endLine: number; body: string }[] = [];
   const lines = review.split('\n');
-  let currentComment = null;
+  let currentComment: { startLine: number; endLine: number; body: string } | null = null;
 
   for (const line of lines) {
     const match = line.match(/^(\d+)-(\d+):/);
@@ -236,11 +274,39 @@ function parseReviewComments(review: string): { startLine: number; endLine: numb
       };
     } else if (currentComment) {
       currentComment.body += '\n' + line.trim();
+    } else {
+      // Handle cases where the review doesn't start with line numbers
+      currentComment = {
+        startLine: 1,
+        endLine: 1,
+        body: line.trim()
+      };
     }
   }
 
   if (currentComment) {
     comments.push(currentComment);
   }
+
+  // Corner case handling:
+  // 1. If no valid comments were parsed, create a single comment for the entire review
+  if (comments.length === 0 && review.trim() !== '') {
+    comments.push({
+      startLine: 1,
+      endLine: 1,
+      body: review.trim()
+    });
+  }
+
+  // 2. Handle invalid line numbers
+  comments.forEach(comment => {
+    if (isNaN(comment.startLine) || comment.startLine < 1) {
+      comment.startLine = 1;
+    }
+    if (isNaN(comment.endLine) || comment.endLine < comment.startLine) {
+      comment.endLine = comment.startLine;
+    }
+  });
+
   return comments;
 }
