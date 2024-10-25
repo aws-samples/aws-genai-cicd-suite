@@ -50,7 +50,7 @@ jobs:
         else
           echo "GitHub Token is not set"
         fi
-        if [ -n "${{ var.AWS_ROLE_TO_ASSUME_VAR }}" ]; then
+        if [ -n "${{ vars.AWS_ROLE_TO_ASSUME_VAR }}" ]; then
           echo "AWS Role to Assume is set"
         else
           echo "AWS Role to Assume is not set"
@@ -61,7 +61,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         # using repository environment variable to get the role arn
-        role-to-assume: ${{ var.AWS_ROLE_TO_ASSUME_VAR }}
+        role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME_VAR }}
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
