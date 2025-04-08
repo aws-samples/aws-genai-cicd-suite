@@ -172,7 +172,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
-      uses: aws-sample/aws-genai-cicd-suite@stable
+      uses: aws-samples/aws-genai-cicd-suite@stable
       with:
         github-token: \${{ secrets.GITHUB_TOKEN }}
         aws-region: us-east-1
