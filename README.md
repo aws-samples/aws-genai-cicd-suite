@@ -163,7 +163,7 @@ Create a GitHub Actions workflow file in your repository .github/workflows direc
 
 ```yaml
 - name: Code review using AWS Bedrock
-  uses: aws-sample/aws-genai-cicd-suite@stable
+  uses: aws-samples/aws-genai-cicd-suite@stable
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     aws-region: us-east-1
@@ -173,7 +173,7 @@ Create a GitHub Actions workflow file in your repository .github/workflows direc
 
 ```yaml
 - name: Code review using AWS Bedrock
-    uses: aws-sample/aws-genai-cicd-suite@stable
+    uses: aws-samples/aws-genai-cicd-suite@stable
     with:
     # Automatic Provision: The GITHUB_TOKEN is automatically created and provided by GitHub for each workflow run. You don't need to manually create or store this token as a secret.
     github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -283,7 +283,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Intelligent GitHub Actions
-      uses: aws-sample/aws-genai-cicd-suite@stable
+      uses: aws-samples/aws-genai-cicd-suite@stable
       with:
         # Automatic Provision: The GITHUB_TOKEN is automatically created and provided by GitHub for each workflow run. You don't need to manually create or store this token as a secret.
         github-token: ${{ secrets.GITHUB_TOKEN }}
